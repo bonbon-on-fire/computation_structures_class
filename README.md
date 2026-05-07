@@ -340,7 +340,7 @@ Each lab reuses code from prior labs. The ALU module from Lab 2 appears in Labs 
 
 ## TL;DR
 
-Coursework for MIT 6.191 Computation Structures—seven labs and a design project that progressively build a complete computer system, from combinational logic gates up to a pipelined RISC-V processor with caches and an OS kernel, culminating in an open-ended optimization project that pushes the processor to run MNIST neural network inference in under 300 nanoseconds through custom SIMD instructions, pipelined multipliers, branch prediction, and hardware-software co-design.
+Coursework for MIT 6.191 Computation Structures—seven labs and a design project that  build a complete computer system, from combinational logic gates up to a pipelined RISC-V processor with caches and an OS kernel, culminating in an open-ended optimization project that pushes the processor to run MNIST NN inference in under 300 nanoseconds.
 
 ---
 
