@@ -1,29 +1,32 @@
 # Computation Structures Class 2026
 
-## Project Overview
+## Overview
 
 ### What I Built
 
-I completed all seven laboratory exercises for **MIT 6.191 (Computation Structures)**, building a full digital system from the ground up: starting with basic combinational logic gates and progressing through arithmetic units, pipelined multipliers, a single-cycle RISC-V processor, cache memory hierarchies, a pipelined processor with hazard handling, and finally an operating system kernel with process management and system calls.
+I completed all seven laboratory exercises and the open-ended design project for **MIT 6.191 (Computation Structures)**, building a full digital system from the ground up: starting with basic combinational logic gates and progressing through arithmetic units, pipelined multipliers, a single-cycle RISC-V processor, cache memory hierarchies, a pipelined processor with hazard handling, an operating system kernel, and finally a performance-optimized processor for neural network inference.
 
-Each lab builds directly on the one before it. The ALU from Lab 2 reappears inside the processor in Lab 4. The caches from Lab 5 plug into the pipelined processor in Lab 6. The processor from Lab 6 runs the OS kernel code written in Lab 7. By the end, the stack spans gates to operating systems.
+Each lab builds directly on the one before it. The ALU from Lab 2 reappears inside the processor in Lab 4. The caches from Lab 5 plug into the pipelined processor in Lab 6. The processor from Lab 6 runs the OS kernel code written in Lab 7. The design project takes the pipelined processor from Lab 6 and pushes it to its limits with custom instructions, pipeline optimizations, and hardware-software co-design.
 
 ### Why I Built It
 
-6.191 is MIT's core course on how computers work at every level of abstraction. The labs are designed to give hands-on experience with the full hardware-software stack:
+6.191 is MIT's core course on how computers work at every level of abstraction. The labs and project are designed to give hands-on experience with the full hardware-software stack:
 
 - **Hardware design** in Minispec (a hardware description language) and Bluespec SystemVerilog
 - **Processor architecture** implementing the RISC-V instruction set
 - **Memory systems** with realistic cache hierarchies
 - **Systems software** writing kernel code in C and RISC-V assembly
+- **Performance optimization** co-designing hardware and software for a real workload
 
 ## Technical Overview
 
 ### System Architecture
 
-The seven labs form a bottom-up construction of a complete computer system:
+The seven labs and design project form a bottom-up construction of a complete computer system:
 
 ```
+Design Project: Optimized MNIST Processor (Minispec + C)
+  |  custom SIMD instructions, pipelined multipliers, branch prediction, cache tuning
 Lab 7: OS Kernel (C / RISC-V Assembly)
   |  syscalls, traps, process scheduling, semaphores
 Lab 6: Pipelined Processor + Caches (Minispec)
@@ -42,14 +45,14 @@ Lab 1: Combinational Logic (Minispec)
 
 ### Tools and Languages
 
-- **Minispec** (.ms files) - Hardware description language used for Labs 1-6
+- **Minispec** (.ms files) - Hardware description language used for Labs 1-6 and Design Project
 - **Bluespec SystemVerilog** (.bsv files) - Used for select modules and test infrastructure
-- **C** - Kernel and user-space code in Lab 7
-- **RISC-V Assembly** (.S files) - Trap handlers, dispatchers, and user processes in Lab 7
+- **C** - Kernel code (Lab 7), MNIST neural network software (Design Project)
+- **RISC-V Assembly** (.S files) - Trap handlers, dispatchers, user processes, inline assembly for custom instructions
 - **Python** - RISC-V ISA simulator and test harnesses
 - **Synth toolchain** - Logic synthesis for area/delay analysis
 
-## Lab Summaries
+## Course Summaries
 
 ### Lab 1: Combinational Digital Systems
 
@@ -161,6 +164,33 @@ Implements OS kernel infrastructure in C and RISC-V assembly, running on the pro
 
 **Key concepts:** User vs. kernel privilege modes, trap handling and context save/restore, system call interface (ecall), process table management, binary semaphores for synchronization, round-robin scheduling with MRU pointer, libc dependency on OS stubs.
 
+### Design Project: MNIST Neural Network Processor Optimization
+
+Open-ended capstone project: optimize a RISC-V processor and software stack to run an MNIST handwritten digit neural network as fast as possible. Scored on total runtime (cycle count × clock period). The neural network performs inference on 28×28 grayscale images through three fully-connected layers (784→300→100→10) using quantized 8-bit weights.
+
+**Hardware optimizations implemented:**
+- Kogge-Stone parallel prefix adder replacing default `+` operator (~150ps vs ~210ps)
+- Custom `packmul` instruction: 4× parallel 8-bit multiply-accumulate (SIMD-style)
+- Pipelined packmul: partial products in Execute, summation in Writeback via fastAdd tree
+- Custom `mul`/`mulh` instructions: 32×32→64 signed multiply via 4× pipelined 16×16 partial products with carry-select combination in Writeback
+- Specialized read-only instruction cache (no store/subword/writeback logic)
+- Fetch2 pipeline stage: registered buffer between iCache and Decode to reduce tCLK
+- Early redirect for JAL in Decode stage
+- Static backward-branch prediction: predict taken for negative-offset branches
+- Precomputed pc+4 and branch targets passed through pipeline registers to remove adders from Execute critical path
+- Tuned cache geometry (256 sets, 16 words/line, 2-way set-associative)
+
+**Software optimizations implemented:**
+- Hardware `__mulsi3` (single mul instruction vs ~32-cycle software loop)
+- Direct `hw_mulh` for requantize (eliminates ~130-cycle `__muldi3` calls)
+- Packed 4-byte input loading with hardware offset transform
+- 16× inner loop unrolling for the dominant matrix-vector multiply
+- Function inlining with `__attribute__((always_inline))`
+
+**Key concepts:** Hardware-software co-design, ISA extensions (custom RISC-V instructions via `.insn` directive), SIMD parallelism, pipeline balancing (tCLK vs CPI tradeoffs), critical path analysis with `synth`, carry-select adders for pipelined multiply, branch prediction strategies.
+
+**Result:** ≤300,000ns runtime (17 out of 20 points)
+
 ## Project Structure
 
 ```
@@ -219,31 +249,47 @@ computation_structures_class_2026/
 |   +-- sw/                     Test programs
 |
 +-- lab7-nbhakar/          Lab 7: OS Kernel
-    +-- src/
-    |   +-- handler.S            Trap handler (assembly)
-    |   +-- kernel.S             Kernel boot code
-    |   +-- dispatcher.c         Context switching
-    |   +-- syscalls.c           Syscall dispatcher
-    |   +-- kernel_api.c         Kernel services
-    |   +-- libc_stubs.c         C library OS stubs
-    +-- include/
-    |   +-- dispatcher.h         Process state definitions
-    |   +-- kernel_api.h         Kernel API signatures
-    |   +-- syscalls.h           Syscall number definitions
-    +-- user/
-    |   +-- proc1.S, proc2.S     Assembly user processes
-    |   +-- proc3.c, proc4.c     C user processes
-    |   +-- start/start.S        User program entry point
-    +-- sim/
-    |   +-- Riscv.py             RISC-V ISA simulator
-    |   +-- run.py               Test harness
-    +-- tests/                   Test suites (handler, print, read, proc_tbl, sems)
-    +-- discussion_questions.txt
+|   +-- src/
+|   |   +-- handler.S            Trap handler (assembly)
+|   |   +-- kernel.S             Kernel boot code
+|   |   +-- dispatcher.c         Context switching
+|   |   +-- syscalls.c           Syscall dispatcher
+|   |   +-- kernel_api.c         Kernel services
+|   |   +-- libc_stubs.c         C library OS stubs
+|   +-- include/
+|   |   +-- dispatcher.h         Process state definitions
+|   |   +-- kernel_api.h         Kernel API signatures
+|   |   +-- syscalls.h           Syscall number definitions
+|   +-- user/
+|   |   +-- proc1.S, proc2.S     Assembly user processes
+|   |   +-- proc3.c, proc4.c     C user processes
+|   |   +-- start/start.S        User program entry point
+|   +-- sim/
+|   |   +-- Riscv.py             RISC-V ISA simulator
+|   |   +-- run.py               Test harness
+|   +-- tests/                   Test suites (handler, print, read, proc_tbl, sems)
+|   +-- discussion_questions.txt
+|
++-- project-nbhakar/       Design Project: MNIST Processor Optimization
+    +-- Processor.ms            Optimized 5-stage pipelined processor
+    +-- ALU.ms                  ALU with Kogge-Stone adder, packmul, mul/mulh
+    +-- Decode.ms               Decoder with custom instruction support
+    +-- Execute.ms              Execute stage with precomputed values
+    +-- ProcTypes.ms            Extended type definitions (PACKMUL, MUL_OP)
+    +-- ICacheTwoWay.ms         Specialized read-only instruction cache
+    +-- TwoWayCache.ms          Two-way set-associative data cache
+    +-- CacheTypes.ms           Tuned cache geometry (256 sets)
+    +-- CacheHelpers.ms         Cache address helpers
+    +-- mnist_src/
+    |   +-- model.c             Optimized MNIST inference (packmul, hw_mulh)
+    |   +-- mul.h               Hardware multiply interface (mul, mulh, packmul)
+    +-- sw/                     MNIST test programs and weight data
+    +-- test_out/               Simulation output
 ```
 
 ## How the Stack Connects
 
-The labs are designed so that each layer feeds into the next:
+The labs and project are designed so that each layer feeds into the next:
 
 ```
 Lab 1: Gates & Boolean Logic
@@ -265,9 +311,12 @@ Lab 6: Pipelined Processor + Caches
   |
   v  (hardware runs software)
 Lab 7: OS Kernel
+  |
+  v  (optimize the whole stack for a real workload)
+Design Project: MNIST Processor Optimization
 ```
 
-Each lab reuses code from prior labs. The ALU module from Lab 2 appears in Labs 4 and 6. The cache modules from Lab 5 are integrated into the pipelined processor in Lab 6. The complete hardware platform from Lab 6 is what executes the kernel and user programs written in Lab 7.
+Each lab reuses code from prior labs. The ALU module from Lab 2 appears in Labs 4 and 6. The cache modules from Lab 5 are integrated into the pipelined processor in Lab 6. The complete hardware platform from Lab 6 is what executes the kernel and user programs written in Lab 7. The design project takes the pipelined processor and caches from Lab 6 and optimizes them with custom instructions, pipeline restructuring, and software co-optimization to minimize neural network inference runtime.
 
 ## Challenges and How I Solved Them
 
@@ -283,9 +332,15 @@ Each lab reuses code from prior labs. The ALU module from Lab 2 appears in Labs 
 
 **Trap handler register save (Lab 7):** The trap handler must save all registers before using any, but needs a register to do the saving. Solved using the `mscratch` CSR: swap one register into `mscratch`, use it to locate the process control block, save all other registers, then save the original register from `mscratch`.
 
+**Kogge-Stone adder for non-power-of-2 widths (Design Project):** The parallel prefix adder needed `ceil(log2(n))` stages, but Minispec's `log2()` returns floor for non-power-of-2 values. This caused silent carry propagation failures for 18-bit and 33-bit adders used in pipelined multiply. Fixed by computing exact stage counts per bit-width.
+
+**Pipelining custom multiply instructions (Design Project):** Adding a 32×32→64 signed multiply (`mulh`) directly in the ALU increased tCLK dramatically. Solved by splitting into 4× 16×16 unsigned partial products computed in Execute, with carry-select combination and signed correction applied in Writeback. This keeps the largest multiplier at 16×16 (~200ps) instead of 32×32 (~500ps).
+
+**Hardware-software co-design tradeoffs (Design Project):** Every hardware optimization (pipelining packmul, adding pipeline stages) trades CPI for tCLK. The key insight was that runtime = cycles × tCLK, so optimizations that increase cycles by 5% but decrease tCLK by 20% are worthwhile. Backward branch prediction in Decode eliminates most branch penalties from the inner loops, recovering cycles lost from the extra Fetch2 pipeline stage.
+
 ## TL;DR
 
-Coursework for MIT 6.191 Computation Structures—seven labs that progressively build a complete computer system, from combinational logic gates up to a pipelined RISC-V processor with caches and an OS kernel. All hardware designed in Minispec, with the final lab implementing trap handling, system calls, and process scheduling in C & RISC-V assembly.
+Coursework for MIT 6.191 Computation Structures—seven labs and a design project that progressively build a complete computer system, from combinational logic gates up to a pipelined RISC-V processor with caches and an OS kernel, culminating in an open-ended optimization project that pushes the processor to run MNIST neural network inference in under 300 nanoseconds through custom SIMD instructions, pipelined multipliers, branch prediction, and hardware-software co-design.
 
 ---
 
