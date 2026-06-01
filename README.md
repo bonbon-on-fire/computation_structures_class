@@ -344,5 +344,5 @@ Coursework for MIT 6.191 Computation Structures—seven labs and a design projec
 
 ---
 
-**Project Duration:** Spring 2026
-**Technologies:** Minispec, Bluespec SystemVerilog, C, RISC-V Assembly, Python, Make
+**Class Duration**: Spring 2026  
+**Technologies**: Minispec, Bluespec SystemVerilog, C, RISC-V Assembly, Python
