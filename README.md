@@ -1,4 +1,4 @@
-# Computation Structures Class 2026
+# Computation Structures Class
 
 ## Overview
 
